@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Idea Lab</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --bg2: #12121a;
+  --bg3: #1a1a25;
+  --text: #e8e6e0;
+  --text-dim: #8a8890;
+  --text-muted: #555560;
+  --accent: #ff6b35;
+  --accent2: #35c9ff;
+  --accent3: #c470ff;
+  --accent4: #3dff8f;
+  --accent5: #ffd43b;
+  --accent6: #ff3d71;
+  --cat-core: #ff6b35;
+  --cat-infra: #35c9ff;
+  --cat-experience: #c470ff;
+  --cat-data: #3dff8f;
+  --cat-strategy: #ffd43b;
+  --cat-reference: #9ca3af;
+  --border: #2a2a35;
+  --glow: 0 0 30px rgba(255,107,53,0.15);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ── CANVAS ── */
+#canvas-container {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+canvas { display: block; }
+
+/* ── TOP BAR ── */
+.top-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: linear-gradient(180deg, rgba(10,10,15,0.95) 0%, rgba(10,10,15,0.7) 100%);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.top-bar h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.top-bar h1 span {
+  color: var(--accent);
+  font-style: italic;
+}
+.top-bar .stats {
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 16px;
+}
+.top-bar .stats em {
+  font-style: normal;
+  color: var(--accent2);
+}
+
+/* ── LEFT SIDEBAR (FILTERS) ── */
+.filters {
+  position: fixed;
+  top: 55px;
+  left: 0;
+  bottom: 0;
+  width: 200px;
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.filters::-webkit-scrollbar { width: 3px; }
+.filters::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.filter-btn {
+  width: 100%;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: left;
+}
+.filter-btn:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+.filter-btn.active {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.filter-btn .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* ── SIDEBAR SECTION DIVIDERS ── */
+.sidebar-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+  flex-shrink: 0;
+}
+
+/* ── DETAIL PANEL ── */
+.detail-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 420px;
+  min-width: 300px;
+  max-width: 80vw;
+  z-index: 200;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.23,1,0.32,1);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.detail-panel.open { transform: translateX(0); }
+.detail-panel.resizing { transition: none; }
+.resize-handle {
+  position: absolute;
+  left: -4px;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 210;
+}
+.resize-handle:hover,
+.resize-handle.active {
+  background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+  opacity: 0.4;
+}
+.detail-panel .close-btn {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(180deg, var(--bg2) 70%, transparent);
+  z-index: 10;
+  cursor: pointer;
+}
+.detail-panel .close-btn span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+.detail-panel .close-btn .x {
+  width: 24px; height: 24px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-dim);
+  transition: all 0.15s;
+}
+.detail-panel .close-btn:hover .x {
+  border-color: var(--accent6);
+  color: var(--accent6);
+}
+.detail-content {
+  padding: 0 20px 40px;
+}
+.detail-content .idea-number {
+  font-family: 'Instrument Serif', serif;
+  font-size: 56px;
+  font-style: italic;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 4px;
+  opacity: 0.5;
+}
+.detail-content .idea-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+.detail-content .idea-category {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+.detail-content .idea-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+}
+.detail-content .idea-desc strong {
+  color: var(--text);
+}
+.detail-content .meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.meta-item {
+  background: var(--bg3);
+  border-radius: 6px;
+  padding: 10px 12px;
+  text-align: center;
+}
+.meta-item .label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.meta-item .value {
+  font-size: 14px;
+  font-weight: 500;
+}
+.connections-list {
+  margin-top: 16px;
+}
+.connections-list h3 {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.conn-item {
+  padding: 8px 12px;
+  background: var(--bg3);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.conn-item:hover { background: var(--border); }
+.conn-item .conn-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.conn-item .conn-name { color: var(--text); }
+.conn-item .conn-rel { color: var(--text-muted); font-size: 10px; margin-left: auto; }
+
+/* ── SCORE FILTERS (inline in sidebar) ── */
+.score-filters {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+}
+.score-filters.visible {
+  display: flex;
+}
+.score-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.score-filter-group input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.score-filter-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent2);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+.score-filter-group input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent2);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+.score-filter-group .score-val {
+  color: var(--accent2);
+  font-weight: 500;
+  min-width: 10px;
+  text-align: center;
+}
+.filter-toggle {
+  width: 100%;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: left;
+}
+.filter-toggle:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+.filter-toggle.active {
+  background: var(--accent2);
+  color: var(--bg);
+  border-color: var(--accent2);
+}
+
+/* ── RATING TOGGLE ── */
+.rating-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.rating-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.rating-btn:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+.rating-btn.active-down {
+  background: rgba(255,61,113,0.15);
+  border-color: #ff3d71;
+  color: #ff3d71;
+}
+.rating-btn.active-neutral {
+  background: rgba(138,136,144,0.15);
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+.rating-btn.active-up {
+  background: rgba(61,255,143,0.15);
+  border-color: #3dff8f;
+  color: #3dff8f;
+}
+
+/* ── NOTES ── */
+.notes-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.notes-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin: 0 0 8px 0;
+}
+.notes-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(18,18,26,0.6);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.notes-textarea::placeholder {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+.notes-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255,107,53,0.15);
+}
+.notes-textarea:not(:placeholder-shown) {
+  border-color: rgba(255,107,53,0.4);
+  background: rgba(255,107,53,0.05);
+}
+.notes-hint {
+  margin-top: 6px;
+  font-size: 9px;
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+/* ── CONTROLS ── */
+.controls {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 50;
+  display: flex;
+  gap: 6px;
+}
+.ctrl-btn {
+  width: 36px; height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(18,18,26,0.8);
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-family: 'DM Mono', monospace;
+}
+.ctrl-btn:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+/* ── TOOLTIP ── */
+.tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 300;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-width: 260px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+.tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.tooltip .tt-title {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.tooltip .tt-cat {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+.tooltip .tt-desc {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ── LEGEND ── */
+.legend {
+  position: fixed;
+  bottom: 70px;
+  right: 20px;
+  z-index: 50;
+  background: rgba(18,18,26,0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 9px;
+}
+.legend h4 {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 400;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  color: var(--text-dim);
+}
+.legend-item .ldot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── LUCKY BUTTON ── */
+.lucky-btn {
+  position: fixed;
+  bottom: 20px;
+  left: 220px;
+  z-index: 50;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: rgba(255,107,53,0.1);
+  color: var(--accent);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+.lucky-btn:hover {
+  background: rgba(255,107,53,0.2);
+  border-color: var(--accent);
+  box-shadow: 0 0 15px rgba(255,107,53,0.3);
+}
+
+/* ── PAPER LINKS ── */
+.paper-links {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.paper-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: all 0.2s cubic-bezier(0.23,1,0.32,1);
+  background: rgba(53,201,255,0.08);
+  border: 1px solid rgba(53,201,255,0.25);
+  color: #35c9ff;
+}
+.paper-link:hover {
+  background: rgba(53,201,255,0.15);
+  border-color: rgba(53,201,255,0.5);
+  box-shadow: 0 0 20px rgba(53,201,255,0.2);
+}
+.paper-link svg {
+  flex-shrink: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1 id="main-title"></h1>
+  <div class="stats">
+    <span><em id="visible-count">0</em> visible</span>
+    <span><em id="edge-count">0</em> connections</span>
+    <span>drag to pan · scroll to zoom · click to inspect</span>
+  </div>
+</div>
+
+<div class="filters" id="filters"></div>
+<div class="score-filters" id="score-filters"></div>
+
+<div id="canvas-container">
+  <canvas id="graph"></canvas>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tt-title" id="tt-title"></div>
+  <div class="tt-cat" id="tt-cat"></div>
+  <div class="tt-desc" id="tt-desc"></div>
+</div>
+
+<div class="detail-panel" id="detail-panel">
+  <div class="resize-handle" id="resize-handle"></div>
+  <div class="close-btn" onclick="closeDetail()">
+    <span id="detail-panel-title">Idea Detail</span>
+    <div class="x">&times;</div>
+  </div>
+  <div class="detail-content" id="detail-content"></div>
+</div>
+
+<div class="legend">
+  <h4>Categories</h4>
+  <div id="legend-items"></div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" onclick="zoomIn()" title="Zoom in">+</button>
+  <button class="ctrl-btn" onclick="zoomOut()" title="Zoom out">&minus;</button>
+  <button class="ctrl-btn" onclick="resetView()" title="Reset view">&#8962;</button>
+  <button class="ctrl-btn" onclick="togglePhysics()" title="Toggle physics" id="physics-btn">&#9208;</button>
+</div>
+
+<button class="lucky-btn" onclick="feelingLucky()" title="Show a random idea">&#127922; Feeling Lucky!</button>
+
+<script src="data.js"></script>
+<script>
+
+// ═══════════════════════════════════════════════
+// TITLE
+// ═══════════════════════════════════════════════
+
+const ideaCount = IDEAS.length;
+const refCount = REFERENCES.length;
+document.title = `${ideaCount} Ideas · ${refCount} References — Idea Lab`;
+document.getElementById('main-title').innerHTML = `${ideaCount} Ideas · ${refCount} References — <span>Idea Lab</span>`;
+
+const edgeLabelMap = new Map();
+Object.entries(EDGE_LABELS).forEach(([key, label]) => {
+  edgeLabelMap.set(key, label);
+});
+
+// ═══════════════════════════════════════════════
+// FORCE-DIRECTED GRAPH ENGINE
+// ═══════════════════════════════════════════════
+
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+let W, H;
+let dpr = window.devicePixelRatio || 1;
+
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Merge all entries
+const ALL_ENTRIES = [...IDEAS, ...REFERENCES];
+
+// Node state
+let nodes = ALL_ENTRIES.map((entry, i) => {
+  const isRef = entry.cat === 'reference';
+  const angle = (i / ALL_ENTRIES.length) * Math.PI * 2;
+  const radius = isRef ? 350 + Math.random() * 100 : 200 + Math.random() * 200;
+  return {
+    ...entry,
+    x: W/2 + Math.cos(angle) * radius + (Math.random()-0.5)*100,
+    y: H/2 + Math.sin(angle) * radius + (Math.random()-0.5)*100,
+    vx: 0, vy: 0, _fx: 0, _fy: 0,
+    radius: isRef ? 10 : 5 + entry.novelty * 1.2 + (entry.impact || 3) * 0.5,
+    visible: true,
+    highlighted: false,
+    selected: false,
+  };
+});
+
+// Build nodeIndexById lookup
+const nodeIndexById = new Map();
+nodes.forEach((n, i) => { nodeIndexById.set(n.id, i); });
+
+// Precompute descendantOf map: ideaId -> Set of refIds it descends from
+const descendantOf = new Map();
+REFERENCES.forEach(ref => {
+  (ref.descendants || []).forEach(did => {
+    if (!descendantOf.has(did)) descendantOf.set(did, new Set());
+    descendantOf.get(did).add(ref.id);
+  });
+});
+
+// Build edges
+let edges = [];
+const edgeSet = new Set();
+ALL_ENTRIES.forEach(entry => {
+  (entry.connects || []).forEach(targetId => {
+    if (targetId === entry.id) return;
+    const lo = Math.min(entry.id, targetId);
+    const hi = Math.max(entry.id, targetId);
+    const key = lo + '-' + hi;
+    if (edgeSet.has(key)) return;
+    edgeSet.add(key);
+    const srcIdx = nodeIndexById.get(lo);
+    const tgtIdx = nodeIndexById.get(hi);
+    if (srcIdx === undefined || tgtIdx === undefined) return;
+    const isLineage = (nodes[srcIdx] && nodes[srcIdx].cat === 'reference') || (nodes[tgtIdx] && nodes[tgtIdx].cat === 'reference');
+    edges.push({ source: srcIdx, target: tgtIdx, label: EDGE_LABELS[key] || '', lineage: isLineage });
+  });
+});
+
+document.getElementById('edge-count').textContent = edges.length;
+
+// Camera
+let camX = 0, camY = 0, camZoom = 1;
+let targetCamX = 0, targetCamY = 0, targetCamZoom = 1;
+
+function worldToScreen(wx, wy) {
+  return [
+    (wx - camX) * camZoom + W/2,
+    (wy - camY) * camZoom + H/2,
+  ];
+}
+
+function screenToWorldActual(sx, sy) {
+  return [
+    (sx - W/2) / camZoom + camX,
+    (sy - H/2) / camZoom + camY,
+  ];
+}
+
+// Physics — simulated annealing
+let physicsRunning = true;
+let temperature = 1.0;
+const TEMP_DECAY = 0.997;
+const TEMP_STOP = 0.01;
+const REPULSION = 2000;
+const SPRING_K = 0.005;
+const SPRING_LEN = 100;
+const DAMPING = 0.82;
+const CENTER_PULL = 0.0005;
+const MAX_VELOCITY = 8;
+const MAX_FORCE = 10;
+
+function resetTemperature() {
+  temperature = 1.0;
+}
+
+function simulate() {
+  if (!physicsRunning) return;
+  const N = nodes.length;
+
+  for (let i = 0; i < N; i++) {
+    nodes[i]._fx = 0;
+    nodes[i]._fy = 0;
+  }
+
+  // Repulsion
+  for (let i = 0; i < N; i++) {
+    if (!nodes[i].visible) continue;
+    for (let j = i + 1; j < N; j++) {
+      if (!nodes[j].visible) continue;
+      let dx = nodes[j].x - nodes[i].x;
+      let dy = nodes[j].y - nodes[i].y;
+      let dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 1) { dist = 1; dx = Math.random() - 0.5; dy = Math.random() - 0.5; }
+      let force = Math.min(MAX_FORCE, REPULSION / (dist * dist));
+      let fx = (dx / dist) * force;
+      let fy = (dy / dist) * force;
+      nodes[i]._fx -= fx;
+      nodes[i]._fy -= fy;
+      nodes[j]._fx += fx;
+      nodes[j]._fy += fy;
+    }
+  }
+
+  // Spring forces (edges)
+  edges.forEach(e => {
+    const a = nodes[e.source], b = nodes[e.target];
+    if (!a.visible || !b.visible) return;
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    let force = (dist - SPRING_LEN) * SPRING_K;
+    let fx = (dx / dist) * force;
+    let fy = (dy / dist) * force;
+    a._fx += fx; a._fy += fy;
+    b._fx -= fx; b._fy -= fy;
+  });
+
+  // Center pull
+  const cx = W / 2, cy = H / 2;
+  nodes.forEach(n => {
+    if (!n.visible) return;
+    n._fx += (cx - n.x) * CENTER_PULL;
+    n._fy += (cy - n.y) * CENTER_PULL;
+  });
+
+  // Integrate
+  let totalEnergy = 0;
+  nodes.forEach(n => {
+    if (!n.visible) return;
+    n.vx = (n.vx + n._fx * temperature) * DAMPING;
+    n.vy = (n.vy + n._fy * temperature) * DAMPING;
+    const speed = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
+    if (speed > MAX_VELOCITY * temperature) {
+      const scale = (MAX_VELOCITY * temperature) / speed;
+      n.vx *= scale;
+      n.vy *= scale;
+    }
+    n.x += n.vx;
+    n.y += n.vy;
+    totalEnergy += n.vx * n.vx + n.vy * n.vy;
+  });
+
+  // Cool down
+  temperature *= TEMP_DECAY;
+
+  if (temperature < TEMP_STOP || totalEnergy < 0.01) {
+    physicsRunning = false;
+    temperature = TEMP_STOP;
+    nodes.forEach(n => { n.vx = 0; n.vy = 0; });
+    document.getElementById('physics-btn').textContent = '\u25B6';
+  }
+}
+
+// ── RENDERING ──
+
+let hoveredNode = null;
+let selectedNode = null;
+let activeFilters = new Set();
+
+function getCatColor(cat) {
+  return CATEGORIES[cat]?.color || '#888';
+}
+
+function truncate(str, max) {
+  return str.length > max ? str.slice(0, max) + '\u2026' : str;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Smooth camera
+  camX += (targetCamX - camX) * 0.1;
+  camY += (targetCamY - camY) * 0.1;
+  camZoom += (targetCamZoom - camZoom) * 0.1;
+
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.scale(camZoom, camZoom);
+  ctx.translate(-camX, -camY);
+
+  // Draw edges
+  edges.forEach(e => {
+    const a = nodes[e.source], b = nodes[e.target];
+    if (!a.visible || !b.visible) return;
+
+    const isHighlighted = (selectedNode && (selectedNode.id === a.id || selectedNode.id === b.id)) ||
+                          (hoveredNode && (hoveredNode.id === a.id || hoveredNode.id === b.id));
+
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+
+    if (e.lineage) {
+      ctx.setLineDash([6 / camZoom, 4 / camZoom]);
+      if (isHighlighted) {
+        ctx.strokeStyle = 'rgba(156,163,175,0.5)';
+        ctx.lineWidth = 1.5 / camZoom;
+      } else {
+        ctx.strokeStyle = 'rgba(156,163,175,0.08)';
+        ctx.lineWidth = 0.7 / camZoom;
+      }
+    } else if (isHighlighted) {
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1.5 / camZoom;
+    } else {
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 0.5 / camZoom;
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Edge label
+    if (isHighlighted && e.label && camZoom > 0.5) {
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      const fontSize = Math.max(8, 9 / camZoom);
+      ctx.font = `300 ${fontSize}px 'DM Mono', monospace`;
+      const tw = ctx.measureText(e.label).width;
+      const px = 4 / camZoom, py = 2 / camZoom;
+      const rx = 3 / camZoom;
+      const bx = mx - tw/2 - px, by = my - fontSize/2 - py;
+      const bw = tw + px*2, bh = fontSize + py*2;
+      ctx.fillStyle = 'rgba(10,10,15,0.85)';
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, rx);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(232,230,224,0.8)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(e.label, mx, my);
+    }
+  });
+
+  // Draw nodes
+  nodes.forEach(n => {
+    if (!n.visible) return;
+
+    const isHovered = hoveredNode && hoveredNode.id === n.id;
+    const isSelected = selectedNode && selectedNode.id === n.id;
+    const isConnected = selectedNode && selectedNode.connects && selectedNode.connects.includes(n.id);
+    const isHovConnected = hoveredNode && hoveredNode.connects && hoveredNode.connects.includes(n.id);
+    const isDimmed = (selectedNode && !isSelected && !isConnected) ||
+                     (hoveredNode && !isHovered && !isHovConnected && !selectedNode);
+
+    const color = getCatColor(n.cat);
+    const r = n.radius / camZoom;
+
+    // Glow
+    if (isHovered || isSelected) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r * 3, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3);
+      grad.addColorStop(0, color + '40');
+      grad.addColorStop(1, color + '00');
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    const isReference = n.cat === 'reference';
+
+    if (isReference) {
+      // Diamond shape for references
+      ctx.beginPath();
+      ctx.moveTo(n.x, n.y - r * 1.3);
+      ctx.lineTo(n.x + r * 1.1, n.y);
+      ctx.lineTo(n.x, n.y + r * 1.3);
+      ctx.lineTo(n.x - r * 1.1, n.y);
+      ctx.closePath();
+      ctx.fillStyle = isDimmed ? color + '20' : (isSelected ? '#fff' : color + 'cc');
+      ctx.fill();
+      ctx.strokeStyle = isDimmed ? color + '30' : (isSelected ? '#fff' : color);
+      ctx.lineWidth = 1.5 / camZoom;
+      ctx.stroke();
+    } else {
+      // Circle for ideas
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = isDimmed ? color + '30' : (isSelected ? '#fff' : color);
+      ctx.fill();
+
+      if (isSelected || isConnected) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5 / camZoom;
+        ctx.stroke();
+      } else if (!isDimmed && (n.impact || 3) >= 4) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 2/camZoom, 0, Math.PI * 2);
+        ctx.strokeStyle = color + '60';
+        ctx.lineWidth = 1 / camZoom;
+        ctx.stroke();
+      }
+    }
+
+    // Rating indicator
+    if (!isReference && !isDimmed) {
+      const rating = getRating(n.id);
+      if (rating === 'up') {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 3/camZoom, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(61,255,143,0.6)';
+        ctx.lineWidth = 1.5 / camZoom;
+        ctx.stroke();
+      } else if (rating === 'down') {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 3/camZoom, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,61,113,0.5)';
+        ctx.lineWidth = 1.5 / camZoom;
+        ctx.stroke();
+        const cr = r * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(n.x - cr, n.y - cr);
+        ctx.lineTo(n.x + cr, n.y + cr);
+        ctx.moveTo(n.x + cr, n.y - cr);
+        ctx.lineTo(n.x - cr, n.y + cr);
+        ctx.strokeStyle = 'rgba(255,61,113,0.4)';
+        ctx.lineWidth = 1 / camZoom;
+        ctx.stroke();
+      }
+    }
+
+    // Label
+    if (camZoom > 0.5 || isHovered || isSelected || isConnected) {
+      const fontSize = Math.max(9, 11 / camZoom);
+      ctx.font = `${isDimmed ? '300' : '400'} ${fontSize}px 'DM Mono', monospace`;
+      ctx.fillStyle = isDimmed ? 'rgba(255,255,255,0.15)' : (isSelected || isHovered ? '#fff' : 'rgba(255,255,255,0.6)');
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      const notesTag = (!isReference && getNote(n.id)) ? ' \uD83D\uDCDD' : '';
+      const refTag = isReference ? '\u25C6 ' : '';
+      const label = refTag + (isReference ? '' : n.id + '. ') + truncate(n.name, 28) + notesTag;
+      ctx.fillText(label, n.x + r + 6/camZoom, n.y);
+    }
+  });
+
+  ctx.restore();
+}
+
+// ── INTERACTION ──
+
+let isDragging = false;
+let dragStartX, dragStartY, dragCamStartX, dragCamStartY;
+let dragNode = null;
+
+canvas.addEventListener('mousedown', e => {
+  const [wx, wy] = screenToWorldActual(e.clientX, e.clientY);
+  const hit = findNode(wx, wy);
+  if (hit) {
+    dragNode = hit;
+    physicsRunning = false;
+  } else {
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragCamStartX = targetCamX;
+    dragCamStartY = targetCamY;
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (dragNode) {
+    const [wx, wy] = screenToWorldActual(e.clientX, e.clientY);
+    dragNode.x = wx;
+    dragNode.y = wy;
+    dragNode.vx = 0;
+    dragNode.vy = 0;
+    return;
+  }
+  if (isDragging) {
+    const dx = (e.clientX - dragStartX) / camZoom;
+    const dy = (e.clientY - dragStartY) / camZoom;
+    targetCamX = dragCamStartX - dx;
+    targetCamY = dragCamStartY - dy;
+    return;
+  }
+
+  // Hover detection
+  const [wx, wy] = screenToWorldActual(e.clientX, e.clientY);
+  const hit = findNode(wx, wy);
+  hoveredNode = hit;
+  canvas.style.cursor = hit ? 'pointer' : 'grab';
+
+  // Tooltip
+  const tt = document.getElementById('tooltip');
+  if (hit) {
+    tt.classList.add('visible');
+    tt.style.left = (e.clientX + 16) + 'px';
+    tt.style.top = (e.clientY - 10) + 'px';
+    const isRef = hit.cat === 'reference';
+    const ttName = hit.name;
+    document.getElementById('tt-title').textContent = (isRef ? '\u25C6 ' : hit.id + '. ') + ttName;
+    document.getElementById('tt-cat').style.color = getCatColor(hit.cat);
+    document.getElementById('tt-cat').textContent = isRef
+      ? 'Reference \u00B7 ' + (hit.descendants || []).length + ' descendants'
+      : CATEGORIES[hit.cat].name + ' \u00B7 ' + hit.type + ' \u00B7 Impact ' + (hit.impact || 3);
+    document.getElementById('tt-desc').textContent = hit.short.slice(0, 120) + (hit.short.length > 120 ? '\u2026' : '');
+  } else {
+    tt.classList.remove('visible');
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (dragNode) {
+    dragNode = null;
+    temperature = 0.3;
+    physicsRunning = true;
+    return;
+  }
+  if (isDragging) {
+    isDragging = false;
+    return;
+  }
+});
+
+canvas.addEventListener('click', e => {
+  const [wx, wy] = screenToWorldActual(e.clientX, e.clientY);
+  const hit = findNode(wx, wy);
+  if (hit) {
+    selectNode(hit);
+  } else {
+    closeDetail();
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+  targetCamZoom = Math.max(0.2, Math.min(5, targetCamZoom * zoomFactor));
+}, { passive: false });
+
+function findNode(wx, wy) {
+  let closest = null, closestDist = Infinity;
+  nodes.forEach(n => {
+    if (!n.visible) return;
+    const dx = n.x - wx, dy = n.y - wy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const hitRadius = (n.radius + 8) / camZoom;
+    if (dist < hitRadius && dist < closestDist) {
+      closest = n;
+      closestDist = dist;
+    }
+  });
+  return closest;
+}
+
+function selectNode(node) {
+  selectedNode = node;
+  const panel = document.getElementById('detail-panel');
+  panel.classList.add('open');
+
+  const color = getCatColor(node.cat);
+  const content = document.getElementById('detail-content');
+  const isRef = node.cat === 'reference';
+  document.getElementById('detail-panel-title').textContent = isRef ? 'Reference' : 'Idea Detail';
+
+  function buildConnItem(cid) {
+    const idx = nodeIndexById.get(cid);
+    if (idx === undefined) return '';
+    const cn = nodes[idx];
+    const key = Math.min(node.id, cid) + '-' + Math.max(node.id, cid);
+    const rel = edgeLabelMap.get(key) || '';
+    const isRefConn = cn.cat === 'reference';
+    const prefix = isRefConn ? '\u25C6 ' : cn.id + '. ';
+    return `<div class="conn-item" onclick="selectNode(nodes[${idx}])">
+      <div class="conn-dot" style="background:${getCatColor(cn.cat)};${isRefConn ? 'border-radius:2px;transform:rotate(45deg);' : ''}"></div>
+      <span class="conn-name">${prefix}${cn.name}</span>
+      ${rel ? `<span class="conn-rel">${rel}</span>` : ''}
+    </div>`;
+  }
+
+  if (isRef) {
+    const descIds = node.descendants || [];
+    const otherConns = (node.connects || []).filter(cid => !descIds.includes(cid));
+    let linksHTML = '';
+    if (node.url) {
+      linksHTML = `<div class="paper-links">
+        <a href="${node.url}" target="_blank" rel="noopener" class="paper-link">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          Open Link
+        </a>
+      </div>`;
+    }
+    content.innerHTML = `
+      <div class="idea-number" style="color:${color}">\u25C6</div>
+      <div class="idea-title">${node.name}</div>
+      <div class="idea-category" style="background:${color}22;color:${color};border:1px solid ${color}44">Reference</div>
+      ${linksHTML}
+      <div class="idea-desc">${node.short}</div>
+      <div class="meta-grid" style="grid-template-columns:1fr">
+        <div class="meta-item">
+          <div class="label">Descendants</div>
+          <div class="value" style="color:${color}">${descIds.length} ideas</div>
+        </div>
+      </div>
+      <div class="connections-list">
+        <h3>Descendant Ideas (${descIds.length})</h3>
+        ${descIds.map(cid => buildConnItem(cid)).join('')}
+      </div>
+      ${otherConns.length > 0 ? `<div class="connections-list">
+        <h3>Related (${otherConns.length})</h3>
+        ${otherConns.map(cid => buildConnItem(cid)).join('')}
+      </div>` : ''}
+    `;
+  } else {
+    const sourcePapers = descendantOf.get(node.id);
+    const ideaConns = (node.connects || []).filter(cid => {
+      const idx = nodeIndexById.get(cid);
+      return idx !== undefined && nodes[idx].cat !== 'reference';
+    });
+    const curRating = getRating(node.id);
+    content.innerHTML = `
+      <div class="idea-number">#${node.id}</div>
+      <div class="idea-title">${node.name}</div>
+      <div class="idea-category" style="background:${color}22;color:${color};border:1px solid ${color}44">${CATEGORIES[node.cat].name}</div>
+      <div class="rating-row">
+        <button class="rating-btn ${curRating==='down'?'active-down':''}" onclick="handleRating(${node.id},'down')">\uD83D\uDC4E Dislike</button>
+        <button class="rating-btn ${curRating===null?'active-neutral':''}" onclick="handleRating(${node.id},null)">\u2014 Neutral</button>
+        <button class="rating-btn ${curRating==='up'?'active-up':''}" onclick="handleRating(${node.id},'up')">\uD83D\uDC4D Like</button>
+      </div>
+      <div class="idea-desc">${node.short}</div>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <div class="label">Difficulty</div>
+          <div class="value" style="color:${node.difficulty<=2?'#3dff8f':node.difficulty<=3?'#ffd43b':'#ff3d71'}">${'\u25CF'.repeat(node.difficulty)}${'\u25CB'.repeat(5-node.difficulty)}</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Novelty</div>
+          <div class="value" style="color:${node.novelty>=4?'#3dff8f':node.novelty>=3?'#ffd43b':'#ff3d71'}">${'\u25CF'.repeat(node.novelty)}${'\u25CB'.repeat(5-node.novelty)}</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Feasibility</div>
+          <div class="value" style="color:${node.feasibility>=4?'#3dff8f':node.feasibility>=3?'#ffd43b':'#ff3d71'}">${'\u25CF'.repeat(node.feasibility)}${'\u25CB'.repeat(5-node.feasibility)}</div>
+        </div>
+        <div class="meta-item">
+          <div class="label">Impact</div>
+          <div class="value" style="color:${(node.impact||3)>=4?'#3dff8f':(node.impact||3)>=3?'#ffd43b':'#ff3d71'}">${'\u25CF'.repeat(node.impact||3)}${'\u25CB'.repeat(5-(node.impact||3))}</div>
+        </div>
+      </div>
+      <div class="meta-grid" style="grid-template-columns:1fr">
+        <div class="meta-item">
+          <div class="label">Type</div>
+          <div class="value" style="font-size:12px">${node.type}</div>
+        </div>
+      </div>
+      ${sourcePapers && sourcePapers.size > 0 ? `<div class="connections-list">
+        <h3>Source References (${sourcePapers.size})</h3>
+        ${[...sourcePapers].map(rid => buildConnItem(rid)).join('')}
+      </div>` : ''}
+      <div class="connections-list">
+        <h3>Connected Ideas (${ideaConns.length})</h3>
+        ${ideaConns.map(cid => buildConnItem(cid)).join('')}
+      </div>
+      <div class="notes-section">
+        <h3>Notes</h3>
+        <textarea
+          class="notes-textarea"
+          placeholder="Add notes about this idea..."
+          onchange="handleNoteChange(${node.id}, this.value)"
+          onblur="handleNoteChange(${node.id}, this.value)"
+        >${getNote(node.id)}</textarea>
+        <div class="notes-hint">Auto-saved to browser storage</div>
+      </div>
+    `;
+  }
+
+  targetCamX = node.x;
+  targetCamY = node.y;
+}
+
+function closeDetail() {
+  selectedNode = null;
+  document.getElementById('detail-panel').classList.remove('open');
+}
+
+// ── DETAIL PANEL RESIZE ──
+{
+  const panel = document.getElementById('detail-panel');
+  const handle = document.getElementById('resize-handle');
+  let isResizing = false;
+
+  handle.addEventListener('mousedown', e => {
+    e.preventDefault();
+    isResizing = true;
+    panel.classList.add('resizing');
+    handle.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!isResizing) return;
+    const newWidth = window.innerWidth - e.clientX;
+    panel.style.width = Math.max(300, Math.min(window.innerWidth * 0.8, newWidth)) + 'px';
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!isResizing) return;
+    isResizing = false;
+    panel.classList.remove('resizing');
+    handle.classList.remove('active');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  });
+}
+
+// ── RATINGS (persisted in localStorage) ──
+const RATINGS_KEY = 'idea-lab-ratings';
+let ratings = {};
+
+function loadRatings() {
+  try {
+    const stored = localStorage.getItem(RATINGS_KEY);
+    if (stored) ratings = JSON.parse(stored);
+  } catch(e) { ratings = {}; }
+}
+function saveRatings() {
+  try { localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings)); } catch(e) {}
+}
+function setRating(id, value) {
+  if (value === null) {
+    delete ratings[id];
+  } else {
+    ratings[id] = value;
+  }
+  saveRatings();
+}
+function getRating(id) {
+  return ratings[id] || null;
+}
+
+loadRatings();
+
+function handleRating(id, value) {
+  setRating(id, value);
+  const idx = nodeIndexById.get(id);
+  if (idx !== undefined) selectNode(nodes[idx]);
+  applyAllFilters();
+}
+
+// ── NOTES (persisted in localStorage) ──
+const NOTES_KEY = 'idea-lab-notes';
+let notes = {};
+
+function loadNotes() {
+  try {
+    const stored = localStorage.getItem(NOTES_KEY);
+    if (stored) notes = JSON.parse(stored);
+  } catch(e) { notes = {}; }
+}
+function saveNotes() {
+  try { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); } catch(e) {}
+}
+function setNote(id, value) {
+  if (!value || value.trim() === '') {
+    delete notes[id];
+  } else {
+    notes[id] = value.trim();
+  }
+  saveNotes();
+}
+function getNote(id) {
+  return notes[id] || '';
+}
+function handleNoteChange(id, value) {
+  setNote(id, value);
+}
+
+loadNotes();
+
+// ── FILTERS ──
+
+let searchQuery = '';
+let scoreFilters = { difficulty: 1, novelty: 1, feasibility: 1, impact: 1 };
+let ratingFilter = 'all';
+
+function buildFilters() {
+  const container = document.getElementById('filters');
+
+  // Search (at top)
+  const searchDiv = document.createElement('div');
+  searchDiv.style.cssText = 'width:100%;order:-1;margin-bottom:4px;';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = 'search-input';
+  input.placeholder = 'Search ideas\u2026';
+  input.style.cssText = 'background:rgba(26,26,37,0.9);border:1px solid #2a2a35;border-radius:6px;padding:6px 10px;color:#e8e6e0;font-family:"DM Mono",monospace;font-size:10px;width:100%;outline:none;';
+  input.oninput = () => {
+    searchQuery = input.value.toLowerCase();
+    applyAllFilters();
+  };
+  searchDiv.appendChild(input);
+  container.appendChild(searchDiv);
+
+  // ALL button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'filter-btn active';
+  allBtn.textContent = 'ALL';
+  allBtn.onclick = () => {
+    activeFilters.clear();
+    applyAllFilters();
+  };
+  container.appendChild(allBtn);
+
+  // Category buttons
+  Object.entries(CATEGORIES).forEach(([key, val]) => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.dataset.cat = key;
+    btn.innerHTML = `<span class="dot" style="background:${val.color}"></span>${val.name}`;
+    btn.onclick = () => {
+      if (activeFilters.has(key)) {
+        activeFilters.delete(key);
+      } else {
+        activeFilters.add(key);
+      }
+      applyAllFilters();
+    };
+    container.appendChild(btn);
+  });
+
+  // Divider
+  const divider = document.createElement('div');
+  divider.className = 'sidebar-divider';
+  container.appendChild(divider);
+
+  // Rating filter (cycles: All -> Liked -> Disliked -> Unrated -> All)
+  const ratingBtn = document.createElement('button');
+  ratingBtn.className = 'filter-toggle';
+  ratingBtn.id = 'rating-filter-btn';
+  ratingBtn.textContent = '\u2605 All';
+  const ratingCycle = ['all', 'up', 'down', 'unrated'];
+  const ratingLabels = { all: '\u2605 All', up: '\uD83D\uDC4D Liked', down: '\uD83D\uDC4E Disliked', unrated: '? Unrated' };
+  ratingBtn.onclick = () => {
+    const idx = ratingCycle.indexOf(ratingFilter);
+    ratingFilter = ratingCycle[(idx + 1) % ratingCycle.length];
+    ratingBtn.textContent = ratingLabels[ratingFilter];
+    ratingBtn.classList.toggle('active', ratingFilter !== 'all');
+    applyAllFilters();
+  };
+  container.appendChild(ratingBtn);
+
+  // Scores toggle
+  const scoresBtn = document.createElement('button');
+  scoresBtn.className = 'filter-toggle';
+  scoresBtn.textContent = '\u2699 Scores';
+  scoresBtn.onclick = () => {
+    const sf = document.getElementById('score-filters');
+    const isVisible = sf.classList.toggle('visible');
+    scoresBtn.classList.toggle('active', isVisible);
+  };
+  container.appendChild(scoresBtn);
+
+  // Legend
+  const legendContainer = document.getElementById('legend-items');
+  Object.entries(CATEGORIES).forEach(([key, val]) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    if (key === 'reference') {
+      item.innerHTML = `<span class="ldot" style="background:${val.color};border-radius:1px;transform:rotate(45deg);"></span>${val.name} \u25C6`;
+    } else {
+      item.innerHTML = `<span class="ldot" style="background:${val.color}"></span>${val.name}`;
+    }
+    legendContainer.appendChild(item);
+  });
+}
+
+function buildScoreFilters() {
+  const container = document.getElementById('score-filters');
+  ['difficulty', 'novelty', 'feasibility', 'impact'].forEach(field => {
+    const group = document.createElement('div');
+    group.className = 'score-filter-group';
+    const label = document.createElement('span');
+    label.textContent = field.slice(0, 4) + ' \u2265';
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = 1;
+    slider.max = 5;
+    slider.value = 1;
+    slider.step = 1;
+    const valSpan = document.createElement('span');
+    valSpan.className = 'score-val';
+    valSpan.textContent = '1';
+    slider.oninput = () => {
+      scoreFilters[field] = parseInt(slider.value);
+      valSpan.textContent = slider.value;
+      applyAllFilters();
+    };
+    group.appendChild(label);
+    group.appendChild(slider);
+    group.appendChild(valSpan);
+    container.appendChild(group);
+  });
+}
+
+function applyAllFilters() {
+  // Update category button states
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    if (btn.textContent === 'ALL') {
+      btn.classList.toggle('active', activeFilters.size === 0);
+    } else if (btn.dataset.cat) {
+      btn.classList.toggle('active', activeFilters.has(btn.dataset.cat));
+    }
+  });
+
+  nodes.forEach(n => {
+    const isRef = n.cat === 'reference';
+
+    const matchesCat = isRef || activeFilters.size === 0 || activeFilters.has(n.cat);
+    const matchesSearch = !searchQuery || n.name.toLowerCase().includes(searchQuery) || n.short.toLowerCase().includes(searchQuery) || String(n.id).includes(searchQuery);
+    const matchesScores = isRef || (n.difficulty >= scoreFilters.difficulty &&
+                          n.novelty >= scoreFilters.novelty &&
+                          n.feasibility >= scoreFilters.feasibility &&
+                          (n.impact || 3) >= scoreFilters.impact);
+
+    // Rating filter
+    let matchesRating = true;
+    if (ratingFilter !== 'all' && !isRef) {
+      const r = getRating(n.id);
+      if (ratingFilter === 'up') matchesRating = r === 'up';
+      else if (ratingFilter === 'down') matchesRating = r === 'down';
+      else if (ratingFilter === 'unrated') matchesRating = r === null;
+    }
+
+    n.visible = matchesCat && matchesSearch && matchesScores && matchesRating;
+  });
+  updateVisibleCount();
+}
+
+function updateVisibleCount() {
+  document.getElementById('visible-count').textContent = nodes.filter(n=>n.visible).length;
+}
+
+// ── CONTROLS ──
+function zoomIn() { targetCamZoom = Math.min(5, targetCamZoom * 1.3); }
+function zoomOut() { targetCamZoom = Math.max(0.2, targetCamZoom * 0.7); }
+function resetView() {
+  targetCamX = W/2;
+  targetCamY = H/2;
+  targetCamZoom = 1;
+}
+function togglePhysics() {
+  physicsRunning = !physicsRunning;
+  if (physicsRunning) resetTemperature();
+  document.getElementById('physics-btn').textContent = physicsRunning ? '\u23F8' : '\u25B6';
+}
+
+function feelingLucky() {
+  const candidates = nodes.filter(n => {
+    if (!n.visible) return false;
+    if (n.cat === 'reference') return false;
+    if (getRating(n.id) === 'down') return false;
+    return true;
+  });
+
+  if (candidates.length === 0) {
+    alert('No ideas match your current filters!');
+    return;
+  }
+
+  const lucky = candidates[Math.floor(Math.random() * candidates.length)];
+  selectNode(lucky);
+}
+
+// ── MAIN LOOP ──
+function loop() {
+  simulate();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Initialize
+buildFilters();
+buildScoreFilters();
+
+// Move score filters into sidebar
+document.getElementById('filters').appendChild(document.getElementById('score-filters'));
+
+// Set initial camera to center of mass
+let sumX=0, sumY=0;
+nodes.forEach(n => { sumX+=n.x; sumY+=n.y; });
+targetCamX = camX = sumX / nodes.length;
+targetCamY = camY = sumY / nodes.length;
+
+// Pre-settle: run physics iterations before rendering
+temperature = 1.0;
+physicsRunning = true;
+for (let i = 0; i < 800; i++) {
+  temperature = Math.max(0.15, 1.0 - i / 800);
+  simulate();
+  physicsRunning = true;
+}
+// Recenter camera after layout settles
+sumX = 0; sumY = 0;
+nodes.forEach(n => { sumX += n.x; sumY += n.y; });
+targetCamX = camX = sumX / nodes.length;
+targetCamY = camY = sumY / nodes.length;
+// Start loop with low temperature
+temperature = 0.08;
+physicsRunning = true;
+
+loop();
+</script>
+</body>
+</html>

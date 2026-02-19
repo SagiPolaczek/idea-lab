@@ -7,7 +7,7 @@ Interactive force-directed graph for exploring, rating, and connecting ideas. Ze
 ```
 idea-lab/
   index.html    # Visualization: canvas rendering, physics engine, UI (all-in-one)
-  data.js       # All user data: categories, ideas, references, edge labels
+  data.js       # All user data: categories, ideas, problems, references, edge labels
   README.md     # User-facing documentation
   CLAUDE.md     # Agent instructions (this file)
   AGENTS.md     # Points to this file
@@ -17,19 +17,20 @@ idea-lab/
 
 ## Data Schema (`data.js`)
 
-The file exports 4 global constants via `<script src="data.js">`:
+The file exports 5 global constants via `<script src="data.js">`:
 
 ### `CATEGORIES` — Object
 ```js
 { key: { name: 'Display Name', color: '#hex' } }
 ```
 - The `reference` category is special — renders as diamond shapes, bypasses score filters
+- The `problem` category is special — renders as red gem shapes, bypasses score filters, participates in rating filters
 - Colors should be high-contrast against dark background (`--bg: #0a0a0f`)
 
 ### `IDEAS` — Array of objects
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
-| `id` | number | yes | **Must be unique across IDEAS + REFERENCES**. Convention: 1-199 for ideas |
+| `id` | number | yes | **Must be unique across IDEAS + PROBLEMS + REFERENCES**. Convention: 1-99 for ideas |
 | `cat` | string | yes | Must match a key in `CATEGORIES` |
 | `name` | string | yes | Short title, displayed on graph labels (truncated at 28 chars) |
 | `short` | string | yes | Full description, shown in detail panel and tooltips |
@@ -51,6 +52,16 @@ The file exports 4 global constants via `<script src="data.js">`:
 | `descendants` | number[] | no | Ideas that descend from this reference (shown in detail panel) |
 | `url` | string | no | External link shown as button in detail panel |
 
+### `PROBLEMS` — Array of objects
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `id` | number | yes | **Must be unique across IDEAS + PROBLEMS + REFERENCES**. Convention: 101-199 for problems |
+| `cat` | string | yes | Must be `'problem'` |
+| `name` | string | yes | Short title, displayed on graph labels (truncated at 28 chars) |
+| `short` | string | yes | Full description, shown in detail panel and tooltips |
+| `severity` | number (1-5) | yes | **Affects node size** (radius = 12 + severity*0.8). Shown as severity meter in detail panel |
+| `connects` | number[] | yes | Array of IDs this problem connects to (ideas it blocks/affects, related problems) |
+
 ### `EDGE_LABELS` — Object
 ```js
 { "loId-hiId": "relationship label" }
@@ -67,6 +78,13 @@ The file exports 4 global constants via `<script src="data.js">`:
 3. Add corresponding `EDGE_LABELS` entries for meaningful connections
 4. If the idea descends from a reference, add the idea ID to that reference's `descendants` array
 
+### Adding Problems
+1. Use IDs in the 101-199 range
+2. Always set `cat: 'problem'`
+3. Set `severity` from 1 (minor) to 5 (critical)
+4. Add `connects` entries linking to ideas that address the problem and related problems
+5. Add corresponding `EDGE_LABELS` entries for meaningful connections
+
 ### Adding References
 1. Use IDs in the 201+ range
 2. Always set `cat: 'reference'`
@@ -79,7 +97,7 @@ The file exports 4 global constants via `<script src="data.js">`:
 3. No CSS changes required — colors come from data
 
 ### Data Integrity
-- **No duplicate IDs** across IDEAS + REFERENCES
+- **No duplicate IDs** across IDEAS + PROBLEMS + REFERENCES
 - **No broken connects** — every ID in a `connects` array must exist
 - **No broken descendants** — every ID in `descendants` must exist
 - **Edge labels use lo-hi format** — lower ID first in the key string
@@ -91,14 +109,15 @@ After modifying `data.js`, run this integrity check:
 node -e "
 const fs = require('fs');
 eval(fs.readFileSync('data.js', 'utf8'));
-const allIds = [...IDEAS.map(i=>i.id), ...REFERENCES.map(r=>r.id)];
+const probs = typeof PROBLEMS !== 'undefined' ? PROBLEMS : [];
+const allIds = [...IDEAS.map(i=>i.id), ...probs.map(p=>p.id), ...REFERENCES.map(r=>r.id)];
 const idSet = new Set(allIds);
 let ok = true;
 // Check duplicates
 const dupes = allIds.filter((id, i) => allIds.indexOf(id) !== i);
 if (dupes.length) { console.log('DUPLICATE IDs:', dupes); ok = false; }
 // Check connects
-[...IDEAS, ...REFERENCES].forEach(item => {
+[...IDEAS, ...probs, ...REFERENCES].forEach(item => {
   (item.connects || []).forEach(cid => {
     if (!idSet.has(cid)) { console.log('BROKEN: id=' + item.id + ' -> missing ' + cid); ok = false; }
   });
@@ -109,7 +128,7 @@ REFERENCES.forEach(ref => {
     if (!idSet.has(did)) { console.log('BROKEN DESC: ref=' + ref.id + ' -> missing ' + did); ok = false; }
   });
 });
-console.log(ok ? 'ALL OK (' + IDEAS.length + ' ideas, ' + REFERENCES.length + ' refs)' : 'ERRORS FOUND');
+console.log(ok ? 'ALL OK (' + IDEAS.length + ' ideas, ' + probs.length + ' problems, ' + REFERENCES.length + ' refs)' : 'ERRORS FOUND');
 "
 ```
 

@@ -9,6 +9,7 @@
 //   CATEGORIES  — Category definitions with colors
 //   IDEAS       — Your ideas (id, cat, name, short, difficulty, novelty, feasibility, impact, type, connects)
 //   REFERENCES  — Source/reference items (papers, articles, inspirations)
+//   PROBLEMS    — Barriers, challenges, or failure modes that ideas address
 //   EDGE_LABELS — Relationship labels between connected items, keyed by "lo-hi" (lower id first)
 
 const CATEGORIES = {
@@ -18,6 +19,7 @@ const CATEGORIES = {
   data:           { name: 'Data & Analytics',   color: '#3dff8f' },
   strategy:       { name: 'Strategy',           color: '#ffd43b' },
   reference:      { name: 'Source / Reference',  color: '#9ca3af' },
+  problem:        { name: 'Problem',             color: '#ff2244' },
 };
 
 const IDEAS = [
@@ -54,6 +56,10 @@ const REFERENCES = [
   { id:204, cat:'reference', name:'Don\'t Make Me Think', short:'Steve Krug\'s classic on web usability, intuitive navigation, and user-centered design principles.', connects:[8,11], descendants:[8,10,11,15] },
 ];
 
+const PROBLEMS = [
+  { id:101, cat:'problem', name:'Cold Start Latency', short:'First request after deployment or scaling event takes 3-10x longer than steady-state. Affects serverless functions, container spin-up, and JIT compilation. Degrades user experience during traffic spikes and erodes trust in system reliability.', severity:4, connects:[5,7,9] },
+];
+
 // Edge relationship labels — keyed by "loId-hiId" (lower id first)
 const EDGE_LABELS = {
   '1-2':     'powers',
@@ -84,4 +90,7 @@ const EDGE_LABELS = {
   '12-203':  'versioning',
   '8-204':   'usability',
   '11-204':  'user research',
+  '5-101':   'mitigates',
+  '7-101':   'pre-warms against',
+  '9-101':   'avoids via local',
 };
